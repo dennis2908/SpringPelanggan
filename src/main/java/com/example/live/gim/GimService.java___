@@ -1,0 +1,26 @@
+package com.example.live.gim;
+
+import jakarta.transaction.Transactional;
+import com.example.live.gim.Gim;
+import com.example.live.gim.GimRepository;
+
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+@Service
+public class GimService {
+    @Autowired
+    private GimRepository gimRepository;
+    
+    public ResponseEntity<Object> getAllGims() {
+        List<Gim> gim = gimRepository.findAll();
+        if (gim.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        // TODO Auto-generated method stub
+        return new ResponseEntity<>(gim, HttpStatus.OK);
+    }
+}
