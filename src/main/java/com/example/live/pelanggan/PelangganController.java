@@ -1,6 +1,4 @@
 package com.example.live.pelanggan;
-
-import com.example.live.function.ResponseHandler;
 import com.example.live.function.ResponseHandler;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +12,25 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.amqp.rabbit.core.RabbitTemplate; 
+import org.springframework.stereotype.Component; 
+import org.springframework.amqp.rabbit.annotation.RabbitListener; 
+import org.apache.commons.lang3.StringUtils;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.io.*;
+import org.apache.commons.lang3.SerializationUtils;
+import java.util.Date;
+import java.util.Formatter;
+import java.text.SimpleDateFormat;
+import java.text.DateFormat;
+import java.lang.Long;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import com.example.live.excel.service.ServicePelanggan;
 
 @RestController
 @RequestMapping("/api/pelanggans")
@@ -22,7 +39,11 @@ public class PelangganController {
   @Autowired
   private PelangganRepository pelangganRepository;
 
+  @Autowired private ServicePelanggan servicePelanggan;
+
   private ResponseHandler responseHandler;
+
+  @Autowired private RabbitTemplate rabbitTemplate; 
 
   @GetMapping
   // public List<Pelanggan> getAllPelanggans() {
@@ -35,6 +56,19 @@ public class PelangganController {
       "Success",
       pelangganRepository.findAll()
     );
+  }
+
+  @GetMapping("/downloadExcel")
+  public ResponseEntity<Resource> getFile() {
+    String pelanggan = "pelanggan";
+    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
+    String filename = pelanggan.concat(timeStamp).concat(".xls");
+    InputStreamResource file = new InputStreamResource(servicePelanggan.load());
+
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+        .contentType(MediaType.parseMediaType("application/vnd.ms-excel"))
+        .body(file);
   }
 
   @GetMapping("/{id}")
@@ -62,17 +96,35 @@ public class PelangganController {
     );
   }
 
+
   @PostMapping
   // public Pelanggan createPelanggan(@RequestBody Pelanggan pelanggan) {
   //   return pelangganRepository.save(pelanggan);
   // }
 
   ResponseEntity<Object> createPelanggan(@RequestBody Pelanggan pelanggan) {
-    return ResponseHandler.generateResponse(
+
+    ArrayList<String> pelangganData = new ArrayList<String>();
+    pelangganData.add(0, pelanggan.getName());
+    pelangganData.add(1, pelanggan.getEmail());
+    pelangganData.add(2, pelanggan.getAddress());
+    String pattern = "yyyy-MM-dd";
+
+    // Create an instance of SimpleDateFormat used for formatting 
+    // the string representation of date according to the chosen pattern
+    DateFormat df = new SimpleDateFormat(pattern);   
+    // Using DateFormat format method we can create a string 
+    // representation of a date with the defined format.
+    String dateBirthAsString = df.format(pelanggan.getDateBirth());
+    pelangganData.add(3, dateBirthAsString);
+    String listString = String.join(",", pelangganData);
+    byte[] data = listString.getBytes();
+
+    rabbitTemplate.convertAndSend("pelanggan","save.pelanggan", data);
+    return ResponseHandler.generateResponseXX(
       HttpStatus.OK,
       true,
-      "Success",
-      pelangganRepository.save(pelanggan)
+      "Success"
     );
   }
 
@@ -89,16 +141,29 @@ public class PelangganController {
     @PathVariable Long id,
     @RequestBody Pelanggan pelanggan
   ) {
-    Pelanggan existingPelanggan = pelangganRepository.findById(id).get();
-    existingPelanggan.setName(pelanggan.getName());
-    existingPelanggan.setEmail(pelanggan.getEmail());
-    existingPelanggan.setAddress(pelanggan.getAddress());
-    existingPelanggan.setDateBirth(pelanggan.getDateBirth());
-    return ResponseHandler.generateResponse(
+
+    ArrayList<String> pelangganData = new ArrayList<String>();
+    pelangganData.add(0, pelanggan.getName());
+    pelangganData.add(1, pelanggan.getEmail());
+    pelangganData.add(2, pelanggan.getAddress());
+    String pattern = "yyyy-MM-dd";
+
+    // Create an instance of SimpleDateFormat used for formatting 
+    // the string representation of date according to the chosen pattern
+    DateFormat df = new SimpleDateFormat(pattern);   
+    // Using DateFormat format method we can create a string 
+    // representation of a date with the defined format.
+    String dateBirthAsString = df.format(pelanggan.getDateBirth());
+    pelangganData.add(3, dateBirthAsString);
+    String IdStr = Long.toString(id);
+    pelangganData.add(4, IdStr);
+    String listString = String.join(",", pelangganData);
+    byte[] data = listString.getBytes();
+    rabbitTemplate.convertAndSend("update.pelanggan","update.pelanggan", data);
+    return ResponseHandler.generateResponseXX(
       HttpStatus.OK,
       true,
-      "Success",
-      pelangganRepository.save(existingPelanggan)
+      "Success"
     );
   }
 
