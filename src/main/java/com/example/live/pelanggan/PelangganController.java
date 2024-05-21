@@ -31,6 +31,13 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import com.example.live.excel.service.ServicePelanggan;
+import com.example.live.excel.service.ServiceDPelanggan;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.web.multipart.MultipartFile;
+import com.example.live.excel.message.MessagePelanggan;
+import com.example.live.excel.helper.HelperDExcelPelanggan;
+
+
 
 @RestController
 @RequestMapping("/api/pelanggans")
@@ -44,6 +51,10 @@ public class PelangganController {
   private ResponseHandler responseHandler;
 
   @Autowired private RabbitTemplate rabbitTemplate; 
+
+  @Autowired 
+  
+  private ServiceDPelanggan serviceDPelanggan;
 
   @GetMapping
   // public List<Pelanggan> getAllPelanggans() {
@@ -126,6 +137,27 @@ public class PelangganController {
       true,
       "Success"
     );
+  }
+
+  @PostMapping("/upload")
+  public ResponseEntity<MessagePelanggan> uploadFile(@RequestParam("file") MultipartFile file) {
+    String message = "";
+
+    if (HelperDExcelPelanggan.hasExcelFormat(file)) {
+      try {
+        serviceDPelanggan.save(file);
+
+        message = "Uploaded the file successfully: " + file.getOriginalFilename();
+        return ResponseEntity.status(HttpStatus.OK).body(new MessagePelanggan(message));
+      } catch (Exception e) {
+        message = "Could not upload the file: " + file.getOriginalFilename() + "!";
+        System.out.println(e);
+        return ResponseEntity.status(HttpStatus.EXPECTATION_FAILED).body(new MessagePelanggan(message));
+      }
+    }
+
+    message = "Please upload an excel file!";
+    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new MessagePelanggan(message));
   }
 
   @PutMapping("/{id}")
