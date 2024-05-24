@@ -36,7 +36,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.web.multipart.MultipartFile;
 import com.example.live.excel.message.MessagePelanggan;
 import com.example.live.excel.helper.HelperDExcelPelanggan;
-
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 
 
 @RestController
@@ -131,7 +132,8 @@ public class PelangganController {
     String listString = String.join(",", pelangganData);
     byte[] data = listString.getBytes();
 
-    rabbitTemplate.convertAndSend("pelanggan","save.pelanggan", data);
+    rabbitTemplate.convertAndSend("save.pelanggan","save.pelanggan", data);
+    rabbitTemplate.convertAndSend("send.email.pelanggan","send.email.pelanggan", data);
     return ResponseHandler.generateResponseXX(
       HttpStatus.OK,
       true,
