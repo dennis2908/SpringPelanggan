@@ -1,6 +1,7 @@
 package com.example.live.pelanggan;
 import com.example.live.function.ResponseHandler;
 import java.util.List;
+import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -38,6 +39,10 @@ import com.example.live.excel.message.MessagePelanggan;
 import com.example.live.excel.helper.HelperDExcelPelanggan;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.cache.annotation.Cacheable;
+import java.lang.StringBuilder;
+import java.util.Random;
 
 
 @RestController
@@ -56,16 +61,50 @@ public class PelangganController {
   @Autowired 
   
   private ServiceDPelanggan serviceDPelanggan;
+  
+  @Autowired private RedisTemplate<String, String> redisPelangganTemplate;
+  
+  @Cacheable("myCache")
+  public void saveData(String key, String data) {
+    redisPelangganTemplate.opsForValue().set(key, data);
+  }
+
+
+  @Cacheable("myCache")
+  public Object getData(String key) {
+    return redisPelangganTemplate.opsForValue().get(key);
+  }
+
+  public String generatedRandomStr(){
+        String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+        StringBuilder salt = new StringBuilder();
+        Random rnd = new Random();
+        while (salt.length() < 18) { // length of the random string.
+            int index = (int) (rnd.nextFloat() * SALTCHARS.length());
+            salt.append(SALTCHARS.charAt(index));
+        }
+        String saltStr = salt.toString();
+        return saltStr;
+   
+  }
 
   @GetMapping
   // public List<Pelanggan> getAllPelanggans() {
   //   return pelangganRepository.findAll();
   // }
+  @Cacheable("myCache")
   ResponseEntity<Object> getAllPelanggans() {
-    return ResponseHandler.generateResponse(
+    // RedisTemplate<String, Object> template = new RedisTemplate<>();
+    String generatedRandomStr = this.generatedRandomStr();
+    String jsonPelanggan = new Gson().toJson( pelangganRepository.findAll() );
+    this.saveData(generatedRandomStr, jsonPelanggan);
+    System.out.println(this.getData(generatedRandomStr));
+    // template.opsForValue().set(Long.toString(generatedLong),pelangganRepository.findAll());
+    return ResponseHandler.generateResponseWRedis(
       HttpStatus.OK,
       true,
       "Success",
+      generatedRandomStr,
       pelangganRepository.findAll()
     );
   }
@@ -89,10 +128,15 @@ public class PelangganController {
   // }
 
   ResponseEntity<Object> getPelangganById(@PathVariable Long id) {
-    return ResponseHandler.generateResponse(
+    String generatedRandomStr = this.generatedRandomStr();
+    String jsonPelanggan = new Gson().toJson( pelangganRepository.findById(id).get() );
+    this.saveData(generatedRandomStr, jsonPelanggan);
+    System.out.println(this.getData(generatedRandomStr));
+    return ResponseHandler.generateResponseWRedis(
       HttpStatus.OK,
       true,
       "Success",
+      generatedRandomStr,
       pelangganRepository.findById(id).get()
     );
   }
@@ -100,10 +144,15 @@ public class PelangganController {
   @GetMapping("/findPelangganByName")
   ResponseEntity<Object> findPelangganByName(@RequestParam String name) {
     // System.out.println("ddddd",userRepository.findUserByName(name));
-    return ResponseHandler.generateResponse(
+    String generatedRandomStr = this.generatedRandomStr();
+    String jsonPelanggan = new Gson().toJson( pelangganRepository.findPelangganByName(name) );
+    this.saveData(generatedRandomStr, jsonPelanggan);
+    System.out.println(this.getData(generatedRandomStr));
+    return ResponseHandler.generateResponseWRedis(
       HttpStatus.OK,
       true,
       "Success",
+      generatedRandomStr,
       pelangganRepository.findPelangganByName(name)
     );
   }
