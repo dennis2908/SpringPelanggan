@@ -3,6 +3,7 @@ package com.example.live.pelanggan;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.example.live.constants.PusherConstants;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -14,6 +15,8 @@ import java.time.LocalDate;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
 import org.springframework.core.io.ClassPathResource;
+import jakarta.annotation.PostConstruct;
+import com.pusher.rest.Pusher;
 
 @Service
 public class PelangganSaveRabbitMq {
@@ -22,9 +25,23 @@ public class PelangganSaveRabbitMq {
    * Assigns a Consumer to receive the messages whenever there is one.
    * @param message
    */
+
+   private Pusher pusher;
   @Autowired
   private PelangganRepository pelangganRepository;
 
+  @PostConstruct
+  public void configure() {
+
+    pusher = new Pusher(
+				PusherConstants.PUSHER_APP_ID, 
+				PusherConstants.PUSHER_APP_KEY, 
+				PusherConstants.PUSHER_APP_SECRET
+		);
+
+    pusher.setCluster(PusherConstants.PUSHER_CLUSTER_KEY);
+    pusher.setEncrypted(true);
+  }
   @RabbitListener(queues = {"save.pelanggan"})
   public void receiveMessage(byte[] pelanggan){
 
@@ -41,6 +58,8 @@ public class PelangganSaveRabbitMq {
       pelangganData.setAddress(myList.get(2));
       pelangganData.setDateBirth(date);
       pelangganRepository.save(pelangganData);
+      pusher.trigger("load_data", "save_data", "trigger_load_data");
+
     } catch (Exception e) {
         e.printStackTrace();
     }   
