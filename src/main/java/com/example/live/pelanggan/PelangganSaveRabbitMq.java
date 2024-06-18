@@ -1,6 +1,7 @@
 package com.example.live.pelanggan;
 
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import com.example.live.function.SelfCreatedFunction;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.example.live.constants.PusherConstants;
@@ -18,6 +19,15 @@ import org.springframework.core.io.ClassPathResource;
 import jakarta.annotation.PostConstruct;
 import com.pusher.rest.Pusher;
 
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.example.live.log.LogData;
+import com.example.live.log.LogDataRepository;
+
 @Service
 public class PelangganSaveRabbitMq {
 
@@ -29,6 +39,11 @@ public class PelangganSaveRabbitMq {
    private Pusher pusher;
   @Autowired
   private PelangganRepository pelangganRepository;
+
+  private SelfCreatedFunction selfCreatedFunction;
+
+  @Autowired
+  private LogDataRepository logDataRepository;
 
   @PostConstruct
   public void configure() {
@@ -60,6 +75,13 @@ public class PelangganSaveRabbitMq {
       pelangganRepository.save(pelangganData);
       pusher.trigger("load_data", "save_data", "trigger_load_data");
 
+      LogData dataLog = new LogData();
+      dataLog.setId(selfCreatedFunction.generatedRandomStr());
+      dataLog.setOperation("save.data");
+      dataLog.setTable("pelanggan");
+      logDataRepository.save(dataLog);
+      System.out.println(logDataRepository.findAll());
+      
     } catch (Exception e) {
         e.printStackTrace();
     }   

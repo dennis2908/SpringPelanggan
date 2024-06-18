@@ -1,5 +1,6 @@
 package com.example.live.pelanggan;
 import com.example.live.function.ResponseHandler;
+import com.example.live.function.SelfCreatedFunction;
 import java.util.List;
 import com.google.gson.Gson;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +57,8 @@ public class PelangganController {
 
   private ResponseHandler responseHandler;
 
+  SelfCreatedFunction selfCreatedFunction;
+
   @Autowired private RabbitTemplate rabbitTemplate; 
 
   @Autowired 
@@ -75,18 +78,6 @@ public class PelangganController {
     return redisPelangganTemplate.opsForValue().get(key);
   }
 
-  public String generatedRandomStr(){
-        String SALTCHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-        StringBuilder salt = new StringBuilder();
-        Random rnd = new Random();
-        while (salt.length() < 18) { // length of the random string.
-            int index = (int) (rnd.nextFloat() * SALTCHARS.length());
-            salt.append(SALTCHARS.charAt(index));
-        }
-        String saltStr = salt.toString();
-        return saltStr;
-   
-  }
 
   @GetMapping
   // public List<Pelanggan> getAllPelanggans() {
@@ -95,10 +86,10 @@ public class PelangganController {
   @Cacheable("myCache")
   ResponseEntity<Object> getAllPelanggans() {
     // RedisTemplate<String, Object> template = new RedisTemplate<>();
-    String generatedRandomStr = this.generatedRandomStr();
+    String generatedRandomStr = selfCreatedFunction.generatedRandomStr();
     String jsonPelanggan = new Gson().toJson( pelangganRepository.findAll() );
+
     this.saveData(generatedRandomStr, jsonPelanggan);
-    System.out.println(this.getData(generatedRandomStr));
     // template.opsForValue().set(Long.toString(generatedLong),pelangganRepository.findAll());
     return ResponseHandler.generateResponseWRedis(
       HttpStatus.OK,
@@ -128,7 +119,7 @@ public class PelangganController {
   // }
 
   ResponseEntity<Object> getPelangganById(@PathVariable Long id) {
-    String generatedRandomStr = this.generatedRandomStr();
+    String generatedRandomStr = selfCreatedFunction.generatedRandomStr();
     String jsonPelanggan = new Gson().toJson( pelangganRepository.findById(id).get() );
     this.saveData(generatedRandomStr, jsonPelanggan);
     System.out.println(this.getData(generatedRandomStr));
@@ -144,10 +135,10 @@ public class PelangganController {
   @GetMapping("/findPelangganByName")
   ResponseEntity<Object> findPelangganByName(@RequestParam String name) {
     // System.out.println("ddddd",userRepository.findUserByName(name));
-    String generatedRandomStr = this.generatedRandomStr();
+    String generatedRandomStr = selfCreatedFunction.generatedRandomStr();
     String jsonPelanggan = new Gson().toJson( pelangganRepository.findPelangganByName(name) );
     this.saveData(generatedRandomStr, jsonPelanggan);
-    System.out.println(this.getData(generatedRandomStr));
+    System.out.println(generatedRandomStr);
     return ResponseHandler.generateResponseWRedis(
       HttpStatus.OK,
       true,
