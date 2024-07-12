@@ -6,7 +6,10 @@ import jakarta.persistence.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import lombok.NoArgsConstructor;
+
 @Entity
+@NoArgsConstructor
 @Table(name = "users")
 public class User {
   
@@ -17,16 +20,27 @@ public class User {
   @Column(name = "name")
   private String name;
 
+  @Column(name = "username")
+  private String username;
+
   @Column(name = "email")
   private String email;
 
   @Column(name = "address")
   private String address;
 
+  @Column(name = "password")
+  private String password;
+
   @JsonFormat(pattern = "yyyy-MM-dd")
   private Date dateBirth;
 
   //getters and setters
+
+  public User(String email, String password) {
+    this.email = email;
+    this.password = password;
+  }
 
   public Long getId() {
     return id;
@@ -50,6 +64,14 @@ public class User {
 
   public void setEmail(String email) {
     this.email = email;
+  }
+
+  public String getPassword() {
+    return password;
+  }
+
+  public void setPassword(String password) {
+    this.password = password;
   }
 
   public String getAddress() {

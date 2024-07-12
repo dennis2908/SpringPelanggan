@@ -14,9 +14,35 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+
+import com.example.live.auth.JwtUtil;
+import com.example.live.user.User;
+import com.example.live.user.UserLoginReq;
+import com.example.live.user.UserErrorRes;
+import com.example.live.user.UserLoginRes;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+
 @RestController
 @RequestMapping("/api/users")
+
 public class UserController {
+
+  private final AuthenticationManager authenticationManager;
+
+
+    private JwtUtil jwtUtil;
+    public UserController(AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
+        this.authenticationManager = authenticationManager;
+        this.jwtUtil = jwtUtil;
+
+    }
 
   @Autowired
   private UserRepository userRepository;
@@ -63,6 +89,29 @@ public class UserController {
       userRepository.findUserByName(name)
     );
   }
+
+  @PostMapping("/login")
+  public ResponseEntity login(@RequestBody UserLoginReq userLoginReq)  {
+    System.out.println(userLoginReq.getEmail());  
+    try {
+        Authentication authentication =
+                authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(userLoginReq.getEmail(), userLoginReq.getPassword()));
+        String email = authentication.getName();
+        System.out.println(email);  
+        User user = new User(email,"");
+        String token = jwtUtil.createToken(user);
+        UserLoginRes userloginRes = new UserLoginRes(email,token);
+
+        return ResponseEntity.ok(userloginRes);
+
+    }catch (BadCredentialsException e){
+      UserErrorRes errorResponse = new UserErrorRes(HttpStatus.BAD_REQUEST,"Invalid username or password");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }catch (Exception e){
+      UserErrorRes errorResponse = new UserErrorRes(HttpStatus.BAD_REQUEST, e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+}
 
   @PostMapping
   // public User createUser(@RequestBody User user) {
