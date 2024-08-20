@@ -1,9 +1,19 @@
 package com.example.live.user;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParser;
+import io.jsonwebtoken.Jwts;
+
 import com.example.live.function.ResponseHandler;
-import java.util.List;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Map;
+
+// import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
+// import org.springframework.http.*;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,18 +26,25 @@ import org.springframework.web.bind.annotation.RestController;
 
 
 import com.example.live.auth.JwtUtil;
-import com.example.live.user.User;
-import com.example.live.user.UserLoginReq;
-import com.example.live.user.UserErrorRes;
-import com.example.live.user.UserLoginRes;
+// import com.example.live.user.User;
+// import com.example.live.user.UserLoginReq;
+// import com.example.live.user.UserErrorRes;
+// import com.example.live.user.UserLoginRes;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.CookieValue;
+
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
+// import org.springframework.stereotype.Controller;
+// import org.springframework.web.bind.annotation.*;
+
 
 @RestController
 @RequestMapping("/api/users")
@@ -38,16 +55,17 @@ public class UserController {
 
 
     private JwtUtil jwtUtil;
+    private final String secret_key = "mysecretkey";
     public UserController(AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
-
     }
 
   @Autowired
   private UserRepository userRepository;
 
   private ResponseHandler responseHandler;
+  
 
   @GetMapping
   // public List<User> getAllUsers() {
@@ -90,8 +108,41 @@ public class UserController {
     );
   }
 
+
+  @PostMapping("/refresh/token")
+  public ResponseEntity getCookie(@CookieValue(value = "token", defaultValue = "tkn") String cookie) {
+    
+         try {
+          Claims claims = Jwts.parser().setSigningKey(secret_key).parseClaimsJws(cookie).getBody();
+
+         if(claims != null & jwtUtil.validateClaims(claims)){
+
+          String email =  claims.getSubject();
+
+          User user = new User(email,"");
+
+          String token = jwtUtil.createToken(user);
+
+          return ResponseEntity.status(HttpStatus.OK).body(Map.of(
+            "new token", token,
+            "email", email));
+          
+         };
+
+         UserErrorRes errorResponse = new UserErrorRes(HttpStatus.BAD_REQUEST,"Can not refresh token");
+         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+  
+      }catch (BadCredentialsException e){
+        UserErrorRes errorResponse = new UserErrorRes(HttpStatus.BAD_REQUEST,"Can not refresh token");
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+      }catch (Exception e){
+        UserErrorRes errorResponse = new UserErrorRes(HttpStatus.BAD_REQUEST, e.getMessage());
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+      }
+    }
+
   @PostMapping("/login")
-  public ResponseEntity login(@RequestBody UserLoginReq userLoginReq)  {
+  public ResponseEntity login(@RequestBody UserLoginReq userLoginReq, HttpServletResponse response)  {
     System.out.println(userLoginReq.getEmail());  
     try {
         Authentication authentication =
@@ -102,6 +153,8 @@ public class UserController {
         String token = jwtUtil.createToken(user);
         UserLoginRes userloginRes = new UserLoginRes(email,token);
 
+        Cookie cookie = new Cookie("token", token);
+        response.addCookie(cookie);
         return ResponseEntity.ok(userloginRes);
 
     }catch (BadCredentialsException e){
