@@ -37,8 +37,13 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         try {
             String accessToken = jwtUtil.resolveToken(request);
             if (accessToken == null ) {
-                filterChain.doFilter(request, response);
-                return;
+                errorDetails.put("message", "Missing authentication");
+                response.setStatus(HttpStatus.FORBIDDEN.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                mapper.writeValue(response.getWriter(), errorDetails);
+                // filterChain.doFilter(request, response);
+                
+                // return;
             }
             System.out.println("token : "+accessToken);
             Claims claims = jwtUtil.resolveClaims(request);
