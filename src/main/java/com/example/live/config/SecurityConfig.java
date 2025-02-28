@@ -19,9 +19,12 @@ public class SecurityConfig  {
 
     private final UserService userService;
     private final JwtAuthorizationFilter jwtAuthorizationFilter;
+    private final CustomAuthenticationEntryPoint authEntryPoint;
 
-    public SecurityConfig(UserService userService, JwtAuthorizationFilter jwtAuthorizationFilter) {
+
+    public SecurityConfig(UserService userService, JwtAuthorizationFilter jwtAuthorizationFilter, CustomAuthenticationEntryPoint authEntryPoint) {
         this.userService = userService;
+        this.authEntryPoint = authEntryPoint;
         this.jwtAuthorizationFilter = jwtAuthorizationFilter;
 
 
@@ -43,7 +46,10 @@ public class SecurityConfig  {
                 .requestMatchers("/api/users/**").permitAll()
                 .anyRequest().authenticated()
                 .and().sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and().addFilterBefore(jwtAuthorizationFilter,UsernamePasswordAuthenticationFilter.class);
+                .and().addFilterBefore(jwtAuthorizationFilter,UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint(authEntryPoint)  // Use custom entry point
+            );
 
         return http.build();
     }
